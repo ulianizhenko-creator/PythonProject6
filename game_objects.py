@@ -4,10 +4,30 @@ import random
 import math
 from constants import *
 
+# ------------------------------------------------------------------
+# Вспомогательная функция – безопасно выбирает X‑координату,
+# гарантируя, что левый и правый пределы не «пересекаются».
+# ------------------------------------------------------------------
+def safe_random_x(sprite: arcade.Sprite) -> int:
+    """
+    Возвращает случайную X‑позицию, позволяя спрайту полностью помещаться
+    на экране. Если спрайт шире экрана, возвращаем центр экрана.
+    """
+    half = sprite.width / 2
+    min_x = int(half)
+    max_x = int(SCREEN_WIDTH - half)
 
+    # Если ширина спрайта > ширина экрана, min_x будет > max_x
+    if min_x > max_x:
+        return SCREEN_WIDTH // 2
+    return random.randint(min_x, max_x)
+
+
+# ------------------------------------------------------------------
+# ПУЛИ
+# ------------------------------------------------------------------
 class Bullet(arcade.Sprite):
-    """Класс для пуль, выпускаемых как игроком, так и врагами."""
-
+    """Пуля, используемая как игроком, так и врагами."""
     def __init__(self, x, y, angle, speed, friendly=True):
         super().__init__(BULLET_IMAGE, 0.8)
         self.center_x = x
@@ -15,54 +35,57 @@ class Bullet(arcade.Sprite):
         self.angle = angle
         self.speed = speed
         self.friendly = friendly
-
-        # На самом деле arcade.Sprite использует angle в градусах, но change_x/y не зависит от angle
-        # Поэтому вручную рассчитываем вектор скорости
         self.change_x = math.cos(math.radians(angle)) * speed
         self.change_y = math.sin(math.radians(angle)) * speed
-
         if not self.friendly:
             self.color = arcade.color.RED
-            self.texture = arcade.load_texture(BULLET_IMAGE, tinted_color=arcade.color.RED)
 
-    def on_update(self, delta_time: float):
+    def update(self, delta_time: float = 0):
         self.center_x += self.change_x
         self.center_y += self.change_y
         # Удаляем пулю, если она ушла за пределы экрана
-        if self.bottom > SCREEN_HEIGHT or self.top < 0 or self.right < 0 or self.left > SCREEN_WIDTH:
+        if (self.bottom > SCREEN_HEIGHT or self.top < 0 or
+                self.right < 0 or self.left > SCREEN_WIDTH):
             self.remove_from_sprite_lists()
 
 
+# ------------------------------------------------------------------
+# АСТЕРОИДЫ
+# ------------------------------------------------------------------
 class Asteroid(arcade.Sprite):
-    """Класс для астероидов."""
-
+    """Астероид, падающий сверху вниз."""
     def __init__(self):
-        super().__init__(ASTEROID_IMAGE, random.uniform(0.5, 1.5))
-        # Появляется сверху экрана в случайной X позиции
-        self.center_x = random.randint(self.width, SCREEN_WIDTH - self.width)
+        super().__init__(ASTEROID_IMAGE,
+                         random.uniform(0.5, 1.5))
+
+        # Безопасно ставим X‑координату
+        self.center_x = safe_random_x(self)
+
         self.center_y = SCREEN_HEIGHT + self.height
-        self.change_y = -random.uniform(ASTEROID_SPEED_MIN, ASTEROID_SPEED_MAX)
-        # Случайная скорость и направление вращения
+        self.change_y = -random.uniform(ASTEROID_SPEED_MIN,
+                                        ASTEROID_SPEED_MAX)
         self.change_angle = random.uniform(-3, 3)
 
-    def on_update(self, delta_time: float):
+    def update(self, delta_time: float = 0):
         self.center_y += self.change_y
         self.angle += self.change_angle
         if self.bottom < 0:
             self.remove_from_sprite_lists()
 
 
+# ------------------------------------------------------------------
+# УСИЛЕНИЯ (POWER‑UPS)
+# ------------------------------------------------------------------
 class PowerUp(arcade.Sprite):
-    """Базовый класс для усилений."""
-
-    def __init__(self, image_path, power_type):
+    """Базовый класс усовершенствований."""
+    def __init__(self, image_path: str, power_type: str):
         super().__init__(image_path, 0.8)
-        self.center_x = random.randint(self.width, SCREEN_WIDTH - self.width)
+        self.center_x = safe_random_x(self)
         self.center_y = SCREEN_HEIGHT + self.height
         self.change_y = -2
-        self.power_type = power_type  # Например, "shield", "rapid_fire"
+        self.power_type = power_type   # "shield" | "rapid_fire"
 
-    def on_update(self, delta_time: float):
+    def update(self, delta_time: float = 0):
         self.center_y += self.change_y
         self.angle += 1
         if self.bottom < 0:
@@ -70,33 +93,32 @@ class PowerUp(arcade.Sprite):
 
 
 class ShieldPowerUp(PowerUp):
-    """Усиление "Щит"."""
-
+    """Щитовый power‑up."""
     def __init__(self):
         super().__init__(POWERUP_SHIELD_IMAGE, "shield")
 
 
 class RapidFirePowerUp(PowerUp):
-    """Усиление "Скорострельность"."""
-
+    """Ускоряющий fire‑rate power‑up."""
     def __init__(self):
         super().__init__(POWERUP_RAPID_FIRE_IMAGE, "rapid_fire")
 
 
+# ------------------------------------------------------------------
+# ФОН (звёздное небо)
+# ------------------------------------------------------------------
 class Star(arcade.Sprite):
-    """Звезда для фонового эффекта."""
-
+    """Один паттерн звезды для фонового эффекта."""
     def __init__(self):
         super().__init__(STAR_BG_IMAGE)
-        self.center_x = random.randint(0, SCREEN_WIDTH)
+        # Звёзды маленькие, но всё равно используем safe_random_x
+        self.center_x = safe_random_x(self)
         self.center_y = random.randint(0, SCREEN_HEIGHT)
         self.alpha = random.randint(50, 200)
         self.speed = random.uniform(0.2, 1.5)
 
-    def on_update(self, delta_time: float):
+    def update(self, delta_time: float = 0):
         self.center_y -= self.speed
-        # Когда звезда уходит за нижний край экрана, перемещаем ее наверх
         if self.bottom < 0:
             self.center_y = SCREEN_HEIGHT
-            self.center_x = random.randint(0, SCREEN_WIDTH)
-
+            self.center_x = safe_random_x(self)

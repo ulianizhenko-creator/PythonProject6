@@ -42,9 +42,16 @@ POWERUP_RAPID_FIRE_IMAGE = IMAGE_PATH + "powerup_rapid_fire.jpg"
 STAR_BG_IMAGE = IMAGE_PATH + "star.jpg" # Для фона
 
 # Звуковые файлы
-#LASER_SOUND = SOUND_PATH + "laser.wav"
-#EXPLOSION_SOUND = SOUND_PATH + "explosion.wav"
-#POWERUP_SOUND = SOUND_PATH + "powerup.wav"
+LASER_SOUND = SOUND_PATH + "laser.wav"
+EXPLOSION_SOUND = SOUND_PATH + "explosion.wav"
+POWERUP_SOUND = SOUND_PATH + "powerup.wav"
+
+# constants.py
+...
+# Время, в течение которого игрок неуязвим после появления (в кадрах)
+PLAYER_START_INVULNERABLE_TIME = 120      # 2 секунды при 60 FPS
+...
+
 
 # --- Цвета ---
 COLOR_BACKGROUND = arcade.color.BLACK
